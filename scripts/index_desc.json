@@ -1,0 +1,152 @@
+{
+  "mappings": {
+    "clicks": {
+      "properties": {
+        "ad_exchange_info": {
+          "properties": {
+            "desc": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          }
+        },
+        "ad_slot_format": {
+          "type": "long"
+        },
+        "ad_slot_height": {
+          "type": "long"
+        },
+        "ad_slot_id": {
+          "type": "string"
+        },
+        "ad_slot_visibility": {
+          "type": "long"
+        },
+        "ad_slot_width": {
+          "type": "long"
+        },
+        "advertiser_id": {
+          "type": "string"
+        },
+        "anonymous_url_id": {
+          "type": "string"
+        },
+        "bid_id": {
+          "type": "string"
+        },
+        "bidding_price": {
+          "type": "double"
+        },
+        "city_info": {
+          "properties": {
+            "area": {
+              "type": "string"
+            },
+            "dens": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "location": {
+              "type": "geo_point"
+            },
+            "name": {
+              "type": "string"
+            },
+            "stateId": {
+              "type": "string"
+            }
+          }
+        },
+        "creative_id": {
+          "type": "string"
+        },
+        "domain": {
+          "type": "string"
+        },
+        "ip": {
+          "type": "string"
+        },
+        "ipinyou_id": {
+          "type": "string"
+        },
+        "paying_price": {
+          "type": "double"
+        },
+        "region_info": {
+          "properties": {
+            "gsp": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "population": {
+              "type": "string"
+            }
+          }
+        },
+        "stream": {
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          }
+        },
+        "timestmp": {
+          "type": "date"
+        },
+        "url": {
+          "type": "string"
+        },
+        "user_agent": {
+          "properties": {
+            "browser": {
+              "type": "string"
+            },
+            "device_type": {
+              "type": "string"
+            },
+            "os": {
+              "type": "string"
+            }
+          }
+        },
+        "user_tags": {
+          "properties": {
+            "destinationUrl": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "keywordMatchType": {
+              "type": "string"
+            },
+            "keywordStatus": {
+              "type": "string"
+            },
+            "keywordValues": {
+              "type": "string"
+            },
+            "pricingType": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}
