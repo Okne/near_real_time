@@ -75,6 +75,7 @@ object App {
       .setMaster(master)
       .set("spark.cassandra.connection.host", "192.168.56.1")
       .set("es.nodes", "192.168.56.1")
+      .set("spark.streaming.kafka.maxRatePerPartition", "100")
       //.set("es.index.auto.create", "true")
       //.set("es.resource", "hw2/clicks")
       //.set("spark.cleaner.ttl", "100000")
@@ -98,42 +99,38 @@ object App {
     //read data from kafka with new approach (no receivers)
     val topicsSet = topics.split(",").toSet
     val kafkaParams = Map[String, String]("metadata.broker.list" -> brokers, "auto.offset.reset" -> "smallest")
-
     val messages = KafkaUtils.createDirectStream[String, String, StringDecoder, StringDecoder](ssc, kafkaParams, topicsSet)
 
     messages.foreachRDD(rdd => {
-      val clicks = rdd.map(msg => {
-        val splits = msg._2.split("\t")
-        Click(splits(0), splits(1), splits(2), splits(3), splits(4), splits(5), splits(6), splits(7), splits(8), splits(9),
-          splits(10), splits(11), splits(12).toInt, splits(13).toInt, splits(14).toInt, splits(15).toInt, splits(16).toDouble,
-          splits(17), splits(18).toDouble, splits(19), splits(20), splits(21))
+
+      val clicks = rdd.map[(String, String)](msg => {
+        val uuid = java.util.UUID.randomUUID.toString
+        (uuid, msg._2)
       })
 
       val merged_clicks = rdd.map(msg => {
         val splits = msg._2.split("\t")
-        val click = Click(splits(0), splits(1), splits(2), splits(3), splits(4), splits(5), splits(6), splits(7), splits(8), splits(9),
-          splits(10), splits(11), splits(12).toInt, splits(13).toInt, splits(14).toInt, splits(15).toInt, splits(16).toDouble,
-          splits(17), splits(18).toDouble, splits(19), splits(20), splits(21))
-        val state_info = statesMap.value.getOrElse(click.region, UNKNOWN_STATE_OBJ).asInstanceOf[StateInfo]
-        val city_info = citiesMap.value.getOrElse(click.city, UNKNOWN_CITY_OBJ).asInstanceOf[CityInfo]
-        val ad_exchange_info = adExchangeMap.value.getOrElse(click.advertiser_id, UNKNOWN_AD_EXCHANGE).asInstanceOf[AdExchange]
-        val tags = tagsMap.value.getOrElse(click.user_tags, UNKNOWN_TAG_OBJ).asInstanceOf[TagInfo]
-        val stream = logTypesMap.value.getOrElse(click.stream_id, UNKNOWN_LOG_OBJ).asInstanceOf[LogInfo]
-        val ua = UserAgent.parseUserAgentString(click.user_agent)
+
+        val state_info = statesMap.value.getOrElse(splits(5), UNKNOWN_STATE_OBJ).asInstanceOf[StateInfo]
+        val city_info = citiesMap.value.getOrElse(splits(6), UNKNOWN_CITY_OBJ).asInstanceOf[CityInfo]
+        val ad_exchange_info = adExchangeMap.value.getOrElse(splits(7), UNKNOWN_AD_EXCHANGE).asInstanceOf[AdExchange]
+        val tags = tagsMap.value.getOrElse(splits(20), UNKNOWN_TAG_OBJ).asInstanceOf[TagInfo]
+        val stream = logTypesMap.value.getOrElse(splits(21), UNKNOWN_LOG_OBJ).asInstanceOf[LogInfo]
+        val ua = UserAgent.parseUserAgentString(splits(3))
         val uaMap = Map[String, String]("browser" -> ua.getBrowser.getGroup.getName, "os" -> ua.getOperatingSystem.getName,
           "device_type" -> ua.getOperatingSystem.getDeviceType.getName)
 
-        val time = DATE_FORMAT.parse(click.timestmp).getTime
-        ClickInfo(click.bid_id, time, click.ipinyou_id, uaMap, click.ip, ccToMap(state_info),
-          ccToMap(city_info), ccToMap(ad_exchange_info), click.domain, click.url, click.anonymous_url_id,
-          click.ad_slot_id, click.ad_slot_width, click.ad_slot_height, click.ad_slot_visibility, click.ad_slot_format, click.paying_price,
-          click.creative_id, click.bidding_price, click.advertiser_id, ccToMap(tags), ccToMap(stream))
+        val time = DATE_FORMAT.parse(splits(1)).getTime
+        ClickInfo(splits(0), time, splits(2), uaMap, splits(4), ccToMap(state_info),
+          ccToMap(city_info), ccToMap(ad_exchange_info), splits(8), splits(9), splits(10),
+          splits(11), splits(12).toInt, splits(13).toInt, splits(14).toInt, splits(15).toInt, splits(16).toDouble,
+          splits(17), splits(18).toDouble, splits(19), ccToMap(tags), ccToMap(stream))
       })
 
       //save to hot row cache with 30 min TTL
-      clicks.saveToCassandra("spark_hw_2", "hot_logs_table", writeConf = WriteConf(ttl = TTLOption.constant(1800)))
+      //clicks.saveToCassandra("spark_hw_2", "hot_logs_table", writeConf = WriteConf(ttl = TTLOption.constant(1800)))
       //save merged log data to cassandra
-      merged_clicks.saveToCassandra("spark_hw_2", "dwh_logs_table")
+      //merged_clicks.saveToCassandra("spark_hw_2", "dwh_logs_table")
 
       //save merged log data to elasticsearch index
       merged_clicks.saveToEs("hw2/clicks")
@@ -163,9 +160,9 @@ object App {
     }).updateStateByKey(updateStateBySession)
 
     //filter out expired sessions
-    //val activeSessions = latestSessionInfo.filter(s => System.currentTimeMillis() - s._2._2 < SESSION_TIMEOUT).map { case (a, b) => (a, b._1, b._2, b._3) }
+    val activeSessions = latestSessionInfo.filter(s => System.currentTimeMillis() - s._2._2 < SESSION_TIMEOUT).map { case (a, b) => (a, b._1, b._2, b._3) }
 
-    latestSessionInfo.foreachRDD(rdd => {
+    activeSessions.foreachRDD(rdd => {
       rdd.saveToCassandra("spark_hw_2", "session_log_tokens", SomeColumns("session_id" as "_1", "start" as "_2", "end" as "_3", "tags" as "_4"))
     })
 
